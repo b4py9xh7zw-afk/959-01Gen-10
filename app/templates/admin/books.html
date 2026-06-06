@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}图书管理 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📚 图书管理</h2>
+    <a href="{{ url_for('admin.new_book') }}" class="btn btn-primary">➕ 添加新书</a>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for book in books %}
+    <div class="col">
+        <div class="card h-100 book-card">
+            <div class="card-body">
+                <h5 class="card-title">{{ book.title }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ book.author }}</h6>
+                <p class="card-text small">{{ book.description[:100] }}{% if book.description|length > 100 %}...{% endif %}</p>
+                <div class="mb-2">
+                    <span class="badge bg-secondary">ISBN: {{ book.isbn }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-warning{% endif %}">
+                        可借: {{ book.available_copies }}/{{ book.total_licensed_copies }}
+                    </span>
+                    <span class="badge bg-info">借阅: {{ book.borrows.count() }} 次</span>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent d-flex gap-2">
+                <a href="{{ url_for('admin.book_detail', book_id=book.id) }}" class="btn btn-outline-primary flex-grow-1">详情</a>
+                <a href="{{ url_for('admin.new_license', book_id=book.id) }}" class="btn btn-outline-success">➕版权</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if books|length == 0 %}
+<div class="text-center py-5">
+    <p class="text-muted mb-3">暂无图书</p>
+    <a href="{{ url_for('admin.new_book') }}" class="btn btn-primary">添加第一本图书</a>
+</div>
+{% endif %}
+{% endblock %}

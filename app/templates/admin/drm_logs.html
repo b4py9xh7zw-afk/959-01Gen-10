@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}DRM访问日志 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🔒 DRM访问日志</h2>
+    <div class="text-muted">最近 100 条记录</div>
+</div>
+
+<div class="alert alert-info mb-4">
+    <h6>📋 DRM日志说明</h6>
+    <p class="mb-0">所有阅读访问行为都会被记录，包括IP地址、User-Agent和时间戳，用于版权保护审计。
+    <strong>管理员无法查看具体阅读内容，只能访问行为日志。</strong></p>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>时间</th>
+                        <th>读者</th>
+                        <th>图书</th>
+                        <th>操作</th>
+                        <th>IP地址</th>
+                        <th>User-Agent</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><small>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small></td>
+                        <td>{{ log.borrow.reader.username }}</td>
+                        <td>{{ log.borrow.book.title }}</td>
+                        <td>
+                            {% if log.action == 'read' %}
+                            <span class="badge bg-info">阅读</span>
+                            {% elif log.action == 'download' %}
+                            <span class="badge bg-warning">下载</span>
+                            {% elif log.action == 'access_denied' %}
+                            <span class="badge bg-danger">拒绝访问</span>
+                            {% elif log.action == 'token_verified' %}
+                            <span class="badge bg-success">令牌验证</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ log.ip_address }}</code></td>
+                        <td><small class="text-muted" title="{{ log.user_agent }}">{{ log.user_agent[:50] }}...</small></td>
+                        <td>
+                            {% if log.success %}
+                            <span class="text-success">✓</span>
+                            {% else %}
+                            <span class="text-danger">✗</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if logs|length == 0 %}
+<div class="text-center py-5">
+    <div class="display-4 text-muted mb-3">📭</div>
+    <p class="text-muted">暂无DRM访问日志记录</p>
+</div>
+{% endif %}
+{% endblock %}

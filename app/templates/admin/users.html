@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}用户管理 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>👥 用户管理</h2>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>注册时间</th>
+                        <th>当前借阅</th>
+                        <th>总借阅数</th>
+                        <th>总预约数</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>#{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <span class="badge {% if user.active_borrows_count >= 3 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ user.active_borrows_count }}/{{ config['MAX_CONCURRENT_BORROWS'] }}
+                            </span>
+                        </td>
+                        <td>{{ user.borrows.count() }}</td>
+                        <td>{{ user.reservations.count() }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" 
+                               class="btn btn-sm btn-outline-primary">查看详情</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

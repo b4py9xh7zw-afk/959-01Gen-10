@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}预约管理 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>⏳ 预约管理</h2>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('admin.reservations') }}" 
+           class="btn btn-outline-secondary {% if not status %}active{% endif %}">全部</a>
+        <a href="{{ url_for('admin.reservations', status='pending') }}" 
+           class="btn btn-outline-warning {% if status == 'pending' %}active{% endif %}">排队中</a>
+        <a href="{{ url_for('admin.reservations', status='available') }}" 
+           class="btn btn-outline-success {% if status == 'available' %}active{% endif %}">可领取</a>
+        <a href="{{ url_for('admin.reservations', status='fulfilled') }}" 
+           class="btn btn-outline-secondary {% if status == 'fulfilled' %}active{% endif %}">已完成</a>
+        <a href="{{ url_for('admin.reservations', status='expired') }}" 
+           class="btn btn-outline-danger {% if status == 'expired' %}active{% endif %}">已过期</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>读者</th>
+                        <th>图书</th>
+                        <th>排队位置</th>
+                        <th>预约日期</th>
+                        <th>可领取日期</th>
+                        <th>过期日期</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in reservations %}
+                    <tr>
+                        <td>#{{ reservation.id }}</td>
+                        <td>{{ reservation.reader.username }}</td>
+                        <td>{{ reservation.book.title }}</td>
+                        <td>
+                            {% if reservation.status == 'pending' %}
+                            <span class="badge bg-warning">#{{ reservation.queue_position }}</span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ reservation.reservation_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if reservation.available_date %}
+                            {{ reservation.available_date.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if reservation.expiry_date %}
+                            {{ reservation.expiry_date.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if reservation.status == 'pending' %}
+                            <span class="badge bg-warning">排队中</span>
+                            {% elif reservation.status == 'available' %}
+                                {% if reservation.is_expired %}
+                                <span class="badge bg-danger">已过期</span>
+                                {% else %}
+                                <span class="badge bg-success">可领取</span>
+                                {% endif %}
+                            {% elif reservation.status == 'fulfilled' %}
+                            <span class="badge bg-info">已完成</span>
+                            {% elif reservation.status == 'expired' %}
+                            <span class="badge bg-danger">已过期</span>
+                            {% elif reservation.status == 'cancelled' %}
+                            <span class="badge bg-secondary">已取消</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="card bg-light">
+        <div class="card-body">
+            <h5>📊 统计信息</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>总预约数：</strong>{{ reservations|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>排队中：</strong>{{ reservations|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>可领取：</strong>{{ reservations|selectattr('status', 'equalto', 'available')|list|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>已完成：</strong>{{ reservations|selectattr('status', 'equalto', 'fulfilled')|list|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

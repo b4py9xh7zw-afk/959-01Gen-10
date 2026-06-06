@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}借阅历史 - 数字图书馆{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📋 借阅历史</h2>
+
+<ul class="nav nav-tabs mb-4" id="historyTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="borrows-tab" data-bs-toggle="tab" data-bs-target="#borrows-tab-pane">
+            借阅记录 ({{ borrows|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="reservations-tab" data-bs-toggle="tab" data-bs-target="#reservations-tab-pane">
+            预约记录 ({{ reservations|length }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="historyTabsContent">
+    <div class="tab-pane fade show active" id="borrows-tab-pane">
+        {% if borrows %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>图书</th>
+                        <th>作者</th>
+                        <th>借阅日期</th>
+                        <th>到期日期</th>
+                        <th>归还日期</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for borrow in borrows %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('reader.book_detail', book_id=borrow.book.id) }}">{{ borrow.book.title }}</a>
+                        </td>
+                        <td>{{ borrow.book.author }}</td>
+                        <td>{{ borrow.borrow_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ borrow.due_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ borrow.return_date.strftime('%Y-%m-%d') if borrow.return_date else '-' }}</td>
+                        <td>
+                            {% if borrow.status == 'active' %}
+                                {% if borrow.is_overdue %}
+                                <span class="badge bg-danger">已逾期</span>
+                                {% else %}
+                                <span class="badge bg-success">借阅中</span>
+                                {% endif %}
+                            {% elif borrow.status == 'returned' %}
+                            <span class="badge bg-secondary">已归还</span>
+                            {% elif borrow.status == 'overdue' %}
+                            <span class="badge bg-danger">逾期未还</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if borrow.status == 'active' and borrow.can_access %}
+                            <a href="{{ url_for('reader.read_book', borrow_id=borrow.id) }}" class="btn btn-sm btn-primary">阅读</a>
+                            <form action="{{ url_for('reader.return_book', borrow_id=borrow.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要归还这本书吗？')">归还</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <p class="text-muted">暂无借阅记录</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="tab-pane fade" id="reservations-tab-pane">
+        {% if reservations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>图书</th>
+                        <th>作者</th>
+                        <th>预约日期</th>
+                        <th>排队位置</th>
+                        <th>可用日期</th>
+                        <th>到期日期</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in reservations %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('reader.book_detail', book_id=reservation.book.id) }}">{{ reservation.book.title }}</a>
+                        </td>
+                        <td>{{ reservation.book.author }}</td>
+                        <td>{{ reservation.reservation_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ reservation.queue_position if reservation.status == 'pending' else '-' }}</td>
+                        <td>{{ reservation.available_date.strftime('%Y-%m-%d') if reservation.available_date else '-' }}</td>
+                        <td>{{ reservation.expiry_date.strftime('%Y-%m-%d %H:%M') if reservation.expiry_date else '-' }}</td>
+                        <td>
+                            {% if reservation.status == 'pending' %}
+                            <span class="badge bg-warning">排队中</span>
+                            {% elif reservation.status == 'available' %}
+                            <span class="badge bg-success">待领取</span>
+                            {% elif reservation.status == 'fulfilled' %}
+                            <span class="badge bg-primary">已完成</span>
+                            {% elif reservation.status == 'expired' %}
+                            <span class="badge bg-danger">已过期</span>
+                            {% elif reservation.status == 'cancelled' %}
+                            <span class="badge bg-secondary">已取消</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if reservation.status == 'pending' %}
+                            <form action="{{ url_for('reader.cancel_reservation', reservation_id=reservation.id) }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要取消预约吗？')">取消</button>
+                            </form>
+                            {% elif reservation.status == 'available' and not reservation.is_expired %}
+                            <form action="{{ url_for('reader.claim_reservation', reservation_id=reservation.id) }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-success">立即借阅</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <p class="text-muted">暂无预约记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

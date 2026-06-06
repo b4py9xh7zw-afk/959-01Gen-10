@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}添加新书 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">➕ 添加新书</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">书名 *</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="author" class="form-label">作者 *</label>
+                        <input type="text" class="form-control" id="author" name="author" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="isbn" class="form-label">ISBN *</label>
+                        <input type="text" class="form-control" id="isbn" name="isbn" required>
+                        <div class="form-text">国际标准书号，确保唯一性</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">内容简介</label>
+                        <textarea class="form-control" id="description" name="description" rows="4"></textarea>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h5 class="mb-3">📄 版权信息</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="concurrent_copies" class="form-label">并发借阅数 *</label>
+                                <input type="number" class="form-control" id="concurrent_copies" name="concurrent_copies" value="1" min="1" required>
+                                <div class="form-text">可同时借阅的最大人数</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="borrow_days" class="form-label">借阅期限（天）*</label>
+                                <input type="number" class="form-control" id="borrow_days" name="borrow_days" value="14" min="1" max="60" required>
+                                <div class="form-text">每次借阅的有效天数</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin.books') }}" class="btn btn-outline-secondary">取消</a>
+                        <button type="submit" class="btn btn-primary">添加图书</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

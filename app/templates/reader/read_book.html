@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - 阅读{% endblock %}
+
+{% block content %}
+<style>
+    .reading-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #fffef8;
+        padding: 40px 60px;
+        min-height: 80vh;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        line-height: 2;
+        font-size: 18px;
+    }
+    .reading-container pre {
+        font-family: 'Georgia', 'Times New Roman', serif;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background: transparent;
+        border: none;
+        padding: 0;
+        margin: 0;
+        line-height: 2;
+    }
+    .drm-notice {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin-bottom: 30px;
+        font-size: 14px;
+        color: #856404;
+    }
+    .drm-watermark {
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px dashed #ccc;
+        font-size: 12px;
+        color: #999;
+        text-align: center;
+    }
+    .reading-header {
+        position: sticky;
+        top: 0;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        padding: 15px 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        z-index: 100;
+    }
+    @media print {
+        .reading-header, .drm-notice, .drm-watermark {
+            display: none !important;
+        }
+        body {
+            background: white !important;
+        }
+    }
+</style>
+
+<div class="reading-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-1">{{ book.title }}</h4>
+            <small class="text-muted">{{ book.author }}</small>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end">
+                <small class="text-muted d-block">借阅有效期</small>
+                <span class="badge {% if borrow.remaining_days <= 3 %}bg-danger{% else %}bg-success{% endif %}">
+                    剩余 {{ borrow.remaining_days }} 天
+                </span>
+            </div>
+            <a href="{{ url_for('reader.dashboard') }}" class="btn btn-outline-secondary">返回书架</a>
+        </div>
+    </div>
+</div>
+
+<div class="reading-container">
+    <div class="drm-notice">
+        <strong>🔒 DRM 版权保护提示</strong><br>
+        本电子书受数字版权管理(DRM)保护，仅供您个人在借阅有效期内阅读。
+        禁止复制、截图、录屏、转发或用于其他商业用途。
+        所有阅读行为均被记录，违规将追究法律责任。
+    </div>
+
+    <pre>{{ content }}</pre>
+
+    <div class="drm-watermark">
+        此内容仅供借阅者个人阅读，包含唯一识别水印，禁止传播
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        alert('受DRM保护，禁止右键操作');
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) {
+            e.preventDefault();
+            alert('受DRM保护，禁止复制、保存或打印');
+        }
+        if (e.key === 'PrintScreen') {
+            e.preventDefault();
+            alert('受DRM保护，禁止截图');
+        }
+    });
+
+    let warningCount = 0;
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            warningCount++;
+            if (warningCount >= 3) {
+                alert('⚠️ 检测到您离开阅读页面多次。为保护版权，频繁切换页面可能导致阅读权限被暂时限制。');
+            }
+        }
+    });
+</script>
+{% endblock %}

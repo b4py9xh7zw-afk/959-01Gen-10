@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}我的书架 - 数字图书馆{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📚 我的书架</h2>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ active_borrows|length }}</h5>
+                <p class="card-text">正在借阅</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ pending_reservations|length }}</h5>
+                <p class="card-text">预约排队中</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ available_reservations|length }}</h5>
+                <p class="card-text">待领取</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ history|length }}</h5>
+                <p class="card-text">历史借阅</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if active_borrows %}
+<div class="mb-5">
+    <h3 class="mb-3">📖 正在借阅</h3>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for borrow in active_borrows %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ borrow.book.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ borrow.book.author }}</h6>
+                    <div class="mb-2">
+                        <span class="badge {% if borrow.remaining_days <= 3 %}bg-danger{% elif borrow.remaining_days <= 7 %}bg-warning{% else %}bg-success{% endif %}">
+                            剩余 {{ borrow.remaining_days }} 天
+                        </span>
+                        <span class="badge bg-secondary ms-2">借阅期限: {{ borrow.license.borrow_period_days }} 天</span>
+                    </div>
+                    <p class="small text-muted mb-2">
+                        借阅日期: {{ borrow.borrow_date.strftime('%Y-%m-%d') }}<br>
+                        到期日期: {{ borrow.due_date.strftime('%Y-%m-%d') }}
+                    </p>
+                    {% if borrow.last_access_time %}
+                    <p class="small text-muted">最后阅读: {{ borrow.last_access_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent d-flex gap-2">
+                    <a href="{{ url_for('reader.read_book', borrow_id=borrow.id) }}" class="btn btn-primary flex-grow-1">
+                        📖 阅读
+                    </a>
+                    {% if borrow.book.pending_reservations_count == 0 and not borrow.is_overdue %}
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#extendModal{{ borrow.id }}">
+                        续借
+                    </button>
+                    {% endif %}
+                    <form action="{{ url_for('reader.return_book', borrow_id=borrow.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('确定要归还这本书吗？')">
+                            归还
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="extendModal{{ borrow.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">续借图书</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ url_for('reader.extend_borrow', borrow_id=borrow.id) }}" method="POST">
+                        <div class="modal-body">
+                            <p>您正在续借《{{ borrow.book.title }}》</p>
+                            <div class="mb-3">
+                                <label for="days" class="form-label">续借天数</label>
+                                <select class="form-select" id="days" name="days">
+                                    <option value="7">7 天</option>
+                                    <option value="14">14 天</option>
+                                </select>
+                            </div>
+                            <p class="small text-muted">注意：如果有其他读者预约了这本书，您将无法续借。</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary">确认续借</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if available_reservations %}
+<div class="mb-5">
+    <h3 class="mb-3">🎉 待领取图书</h3>
+    <div class="alert alert-success">
+        <strong>提示：</strong>以下图书已为您预留，请在24小时内领取，否则预约将自动失效。
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for reservation in available_reservations %}
+        <div class="col">
+            <div class="card h-100 border-success">
+                <div class="card-body">
+                    <h5 class="card-title">{{ reservation.book.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ reservation.book.author }}</h6>
+                    <p class="small text-muted">
+                        可领取至: {{ reservation.expiry_date.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent d-flex gap-2">
+                    <form action="{{ url_for('reader.claim_reservation', reservation_id=reservation.id) }}" method="POST" class="flex-grow-1">
+                        <button type="submit" class="btn btn-success w-100">立即借阅</button>
+                    </form>
+                    <form action="{{ url_for('reader.cancel_reservation', reservation_id=reservation.id) }}" method="POST">
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('确定要取消预约吗？')">取消</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if pending_reservations %}
+<div class="mb-5">
+    <h3 class="mb-3">⏳ 预约排队中</h3>
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for reservation in pending_reservations %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ reservation.book.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ reservation.book.author }}</h6>
+                    <div class="mb-2">
+                        <span class="badge bg-info">排队位置: {{ reservation.queue_position }}</span>
+                    </div>
+                    <p class="small text-muted">
+                        预约日期: {{ reservation.reservation_date.strftime('%Y-%m-%d') }}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <form action="{{ url_for('reader.cancel_reservation', reservation_id=reservation.id) }}" method="POST">
+                        <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('确定要取消预约吗？')">
+                            取消预约
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not active_borrows and not pending_reservations and not available_reservations %}
+<div class="text-center py-5">
+    <p class="text-muted mb-3">您还没有借阅任何图书</p>
+    <a href="{{ url_for('reader.books') }}" class="btn btn-primary">去借阅图书</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}借阅管理 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📋 借阅管理</h2>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('admin.borrows') }}" 
+           class="btn btn-outline-secondary {% if not status %}active{% endif %}">全部</a>
+        <a href="{{ url_for('admin.borrows', status='active') }}" 
+           class="btn btn-outline-success {% if status == 'active' %}active{% endif %}">借阅中</a>
+        <a href="{{ url_for('admin.borrows', status='returned') }}" 
+           class="btn btn-outline-secondary {% if status == 'returned' %}active{% endif %}">已归还</a>
+        <a href="{{ url_for('admin.borrows', status='overdue') }}" 
+           class="btn btn-outline-danger {% if status == 'overdue' %}active{% endif %}">已逾期</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>读者</th>
+                        <th>图书</th>
+                        <th>借阅日期</th>
+                        <th>到期日期</th>
+                        <th>归还日期</th>
+                        <th>剩余天数</th>
+                        <th>访问次数</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for borrow in borrows %}
+                    <tr>
+                        <td>#{{ borrow.id }}</td>
+                        <td>{{ borrow.reader.username }}</td>
+                        <td>{{ borrow.book.title }}</td>
+                        <td>{{ borrow.borrow_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ borrow.due_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if borrow.return_date %}
+                            {{ borrow.return_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if borrow.status == 'active' %}
+                                {% if borrow.is_overdue %}
+                                <span class="text-danger">已逾期 {{ borrow.remaining_days }} 天</span>
+                                {% else %}
+                                <span class="text-success">{{ borrow.remaining_days }} 天</span>
+                                {% endif %}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ borrow.access_count }}</td>
+                        <td>
+                            {% if borrow.status == 'active' %}
+                                {% if borrow.is_overdue %}
+                                <span class="badge bg-danger">已逾期</span>
+                                {% else %}
+                                <span class="badge bg-success">借阅中</span>
+                                {% endif %}
+                            {% elif borrow.status == 'returned' %}
+                            <span class="badge bg-secondary">已归还</span>
+                            {% elif borrow.status == 'overdue' %}
+                            <span class="badge bg-danger">逾期未还</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <div class="card bg-light">
+        <div class="card-body">
+            <h5>📊 统计信息</h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>总借阅数：</strong>{{ borrows|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>借阅中：</strong>{{ borrows|selectattr('status', 'equalto', 'active')|list|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>已归还：</strong>{{ borrows|selectattr('status', 'equalto', 'returned')|list|length }}</p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-1"><strong>逾期：</strong>{{ borrows|selectattr('status', 'equalto', 'overdue')|list|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

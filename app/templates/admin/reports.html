@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}统计报表 - 数字图书馆{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📊 统计报表</h2>
+
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.total_books }}</h3>
+                <p class="card-text small">馆藏图书</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.total_licenses }}</h3>
+                <p class="card-text small">版权数量</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.total_concurrent }}</h3>
+                <p class="card-text small">总并发数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.total_borrows }}</h3>
+                <p class="card-text small">总借阅数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.borrows_today }}</h3>
+                <p class="card-text small">今日借阅</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-secondary text-white">
+            <div class="card-body text-center">
+                <h3 class="card-title">{{ stats.returns_today }}</h3>
+                <p class="card-text small">今日归还</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">📈 借阅状态统计</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>借阅中</span>
+                        <strong>{{ stats.active_borrows }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: {{ (stats.active_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.active_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>已归还</span>
+                        <strong>{{ stats.returned_borrows }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-info" role="progressbar"
+                             style="width: {{ (stats.returned_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.returned_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>逾期未还</span>
+                        <strong>{{ stats.overdue_borrows }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-danger" role="progressbar"
+                             style="width: {{ (stats.overdue_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.overdue_borrows / stats.total_borrows * 100) if stats.total_borrows > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">⏳ 预约状态统计</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>排队中</span>
+                        <strong>{{ stats.pending_reservations }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-warning" role="progressbar"
+                             style="width: {{ (stats.pending_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.pending_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>已完成</span>
+                        <strong>{{ stats.fulfilled_reservations }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: {{ (stats.fulfilled_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.fulfilled_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>已过期</span>
+                        <strong>{{ stats.expired_reservations }}</strong>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-danger" role="progressbar"
+                             style="width: {{ (stats.expired_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0 }}%">
+                            {{ "%.1f"|format((stats.expired_reservations / stats.total_reservations * 100) if stats.total_reservations > 0 else 0) }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">📜 版权利用率详情</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>图书</th>
+                                <th>并发数</th>
+                                <th>已借阅</th>
+                                <th>可用</th>
+                                <th>利用率</th>
+                                <th>总借阅次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in license_stats %}
+                            <tr>
+                                <td>{{ stat.license.book.title }}</td>
+                                <td>{{ stat.license.concurrent_copies }}</td>
+                                <td>{{ stat.active_borrows }}</td>
+                                <td>{{ stat.license.available_copies }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar {% if stat.utilization_rate >= 90 %}bg-danger{% elif stat.utilization_rate >= 70 %}bg-warning{% else %}bg-success{% endif %}"
+                                             role="progressbar"
+                                             style="width: {{ stat.utilization_rate }}%">
+                                            {{ "%.1f"|format(stat.utilization_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ stat.total_borrows }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">🔥 热门图书排行 (TOP 10)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for book, count in popular_books %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card h-100 border-0 bg-light">
+                            <div class="card-body text-center">
+                                <span class="badge bg-warning mb-2">#{{ loop.index }}</span>
+                                <h6 class="card-title">{{ book.title }}</h6>
+                                <p class="card-text small text-muted mb-1">{{ book.author }}</p>
+                                <p class="card-text">
+                                    <small class="text-muted">总借阅: {{ count }} 次</small>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

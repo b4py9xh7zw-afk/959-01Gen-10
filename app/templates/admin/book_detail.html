@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - 图书详情{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">{{ book.title }}</h2>
+                <h5 class="card-subtitle mb-3 text-muted">{{ book.author }}</h5>
+                <p class="card-text">{{ book.description }}</p>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>ISBN:</strong> {{ book.isbn }}</p>
+                        <p class="mb-1"><strong>可借册数:</strong> {{ book.available_copies }} / {{ book.total_licensed_copies }}</p>
+                        <p class="mb-1"><strong>总借阅次数:</strong> {{ total_borrows }} 次</p>
+                        <p class="mb-1"><strong>预约排队:</strong> {{ total_reservations }} 人</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>内容加密:</strong> 
+                            {% if book.encryption_key %}
+                            <span class="badge bg-success">已启用DRM</span>
+                            {% else %}
+                            <span class="badge bg-danger">未加密</span>
+                            {% endif %}
+                        </p>
+                        <p class="mb-1"><strong>内容哈希:</strong> <code class="small">{{ book.content_hash[:32] }}...</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📄 版权信息</h5>
+                <a href="{{ url_for('admin.new_license', book_id=book.id) }}" class="btn btn-sm btn-success">➕ 添加版权</a>
+            </div>
+            <div class="card-body p-0">
+                {% if licenses %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>版权ID</th>
+                                <th>并发数</th>
+                                <th>借阅期限</th>
+                                <th>购买日期</th>
+                                <th>有效期</th>
+                                <th>利用率</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for license in licenses %}
+                            <tr>
+                                <td>#{{ license.id }}</td>
+                                <td>{{ license.concurrent_copies }}</td>
+                                <td>{{ license.borrow_period_days }} 天</td>
+                                <td>{{ license.purchased_date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if license.expiry_date %}
+                                    {{ license.expiry_date.strftime('%Y-%m-%d') }}
+                                    {% else %}
+                                    永久
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.1f"|format(license.utilization_rate) }}%</td>
+                                <td>
+                                    {% if license.is_active and (not license.expiry_date or license.expiry_date >= now) %}
+                                    <span class="badge bg-success">有效</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">已过期</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">暂无版权信息</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">📋 最近借阅记录</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if borrows %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>读者</th>
+                                <th>借阅日期</th>
+                                <th>到期日期</th>
+                                <th>归还日期</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for borrow in borrows %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('admin.user_detail', user_id=borrow.reader.id) }}">{{ borrow.reader.username }}</a>
+                                </td>
+                                <td>{{ borrow.borrow_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ borrow.due_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ borrow.return_date.strftime('%Y-%m-%d') if borrow.return_date else '-' }}</td>
+                                <td>
+                                    {% if borrow.status == 'active' %}
+                                        {% if borrow.is_overdue %}
+                                        <span class="badge bg-danger">已逾期</span>
+                                        {% else %}
+                                        <span class="badge bg-success">借阅中</span>
+                                        {% endif %}
+                                    {% elif borrow.status == 'returned' %}
+                                    <span class="badge bg-secondary">已归还</span>
+                                    {% elif borrow.status == 'overdue' %}
+                                    <span class="badge bg-danger">逾期未还</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">暂无借阅记录</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">⏳ 预约队列</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if reservations %}
+                <div class="list-group list-group-flush">
+                    {% for reservation in reservations %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ url_for('admin.user_detail', user_id=reservation.reader.id) }}">{{ reservation.reader.username }}</a>
+                            <br>
+                            <small class="text-muted">{{ reservation.reservation_date.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <div>
+                            <span class="badge {% if reservation.status == 'pending' %}bg-warning{% elif reservation.status == 'available' %}bg-success{% else %}bg-secondary{% endif %}">
+                                #{{ reservation.queue_position }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">暂无预约</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">📊 版权授权消耗</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>总并发数:</strong> {{ book.total_licensed_copies }}
+                </p>
+                <p class="mb-2">
+                    <strong>当前使用:</strong> {{ book.active_borrows }}
+                </p>
+                <p class="mb-2">
+                    <strong>剩余可用:</strong> {{ book.available_copies }}
+                </p>
+                <div class="progress mb-2">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ (book.active_borrows / book.total_licensed_copies * 100) if book.total_licensed_copies > 0 else 0 }}%">
+                    </div>
+                </div>
+                <p class="small text-muted text-center">
+                    利用率: {{ "%.1f"|format((book.active_borrows / book.total_licensed_copies * 100) if book.total_licensed_copies > 0 else 0) }}%
+                </p>
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ url_for('admin.reports') }}" class="btn btn-outline-primary">查看详细报表</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

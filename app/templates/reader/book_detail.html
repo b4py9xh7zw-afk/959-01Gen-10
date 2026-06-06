@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">{{ book.title }}</h2>
+                <h5 class="card-subtitle mb-3 text-muted">{{ book.author }}</h5>
+                <p class="card-text">{{ book.description }}</p>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>ISBN:</strong> {{ book.isbn }}</p>
+                        <p class="mb-1"><strong>可借册数:</strong> 
+                            <span class="badge {% if book.available_copies > 0 %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ book.available_copies }} / {{ book.total_licensed_copies }}
+                            </span>
+                        </p>
+                        {% if book.pending_reservations_count > 0 %}
+                        <p class="mb-1"><strong>预约排队:</strong> 
+                            <span class="badge bg-info">{{ book.pending_reservations_count }} 人</span>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% for license in book.licenses %}
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                版权 #{{ license.id }}: {{ license.concurrent_copies }} 并发, 
+                                {{ license.borrow_period_days }} 天借阅期
+                                {% if license.expiry_date %}
+                                <br>有效期至: {{ license.expiry_date.strftime('%Y-%m-%d') }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if queue_info %}
+        <div class="alert alert-info">
+            {% if queue_info.status == 'pending' %}
+            <p class="mb-0">您正在排队预约中，当前位置: <strong>第 {{ queue_info.position }} 位</strong>，共 {{ queue_info.total_pending }} 人排队</p>
+            {% elif queue_info.status == 'available' %}
+            <p class="mb-0">🎉 您预约的图书已可领取！请在 {{ queue_info.expiry_date.strftime('%Y-%m-%d %H:%M') }} 前借阅</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+            {% if can_borrow %}
+            <form action="{{ url_for('reader.borrow_book', book_id=book.id) }}" method="POST">
+                <button type="submit" class="btn btn-primary btn-lg me-md-2">📖 立即借阅</button>
+            </form>
+            {% else %}
+            <button type="button" class="btn btn-primary btn-lg me-md-2" disabled>{{ borrow_message }}</button>
+            {% endif %}
+
+            {% if not can_borrow and book.available_copies <= 0 %}
+                {% if can_reserve %}
+                <form action="{{ url_for('reader.reserve_book', book_id=book.id) }}" method="POST">
+                    <button type="submit" class="btn btn-warning btn-lg">⏳ 预约排队</button>
+                </form>
+                {% else %}
+                <button type="button" class="btn btn-warning btn-lg" disabled>{{ reserve_message }}</button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">ℹ️ 借阅须知</h5>
+            </div>
+            <div class="card-body small">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">✓ 每位读者最多同时借阅 3 本图书</li>
+                    <li class="mb-2">✓ 借阅期限根据版权设定，一般为 7-21 天</li>
+                    <li class="mb-2">✓ 到期前如无其他读者预约，可申请续借</li>
+                    <li class="mb-2">✓ 到期后自动归还，阅读权限即刻失效</li>
+                    <li class="mb-2">✓ 热门图书可预约排队，图书归还后按顺序通知</li>
+                    <li class="mb-2">✓ 预约成功后请在 24 小时内领取，否则自动失效</li>
+                    <li class="mb-2">🔒 所有图书受DRM保护，禁止复制传播</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}添加版权 - 数字图书馆{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h3 class="mb-0">➕ 为《{{ book.title }}》添加版权</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">图书信息</label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5 class="mb-1">{{ book.title }}</h5>
+                                <p class="text-muted mb-0">作者: {{ book.author }} | ISBN: {{ book.isbn }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="concurrent_copies" class="form-label">并发借阅数 *</label>
+                            <input type="number" class="form-control" id="concurrent_copies" 
+                                   name="concurrent_copies" value="1" min="1" required>
+                            <div class="form-text">同时可借阅的最大读者数量</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="borrow_days" class="form-label">借阅期限（天）*</label>
+                            <input type="number" class="form-control" id="borrow_days" 
+                                   name="borrow_days" value="14" min="1" max="365" required>
+                            <div class="form-text">每次借阅的有效期</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="expiry_days" class="form-label">版权有效期（天）</label>
+                        <input type="number" class="form-control" id="expiry_days" 
+                               name="expiry_days" value="0" min="0">
+                        <div class="form-text">0 表示永久有效</div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6>💡 版权说明</h6>
+                        <ul class="mb-0">
+                            <li><strong>并发数</strong>：购买的数字版权允许同时在线阅读的人数</li>
+                            <li><strong>借阅期限</strong>：每位读者每次借阅后可阅读的天数</li>
+                            <li><strong>DRM保护</strong>：所有内容受加密保护，到期后自动无法访问</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin.book_detail', book_id=book.id) }}" 
+                           class="btn btn-outline-secondary">取消</a>
+                        <button type="submit" class="btn btn-primary">确认购买版权</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
