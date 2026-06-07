@@ -28,6 +28,25 @@ class BorrowService:
         if not book:
             return False, "Book not found"
         
+        from app.models import Reservation
+        available_reservation = Reservation.query.filter_by(
+            reader_id=reader_id,
+            book_id=book_id,
+            status='available'
+        ).first()
+        
+        if not available_reservation:
+            pending_count = Reservation.query.filter_by(
+                book_id=book_id,
+                status='pending'
+            ).count()
+            available_count = Reservation.query.filter_by(
+                book_id=book_id,
+                status='available'
+            ).count()
+            if pending_count > 0 or available_count > 0:
+                return False, "This book has a waiting list. Please make a reservation."
+        
         if book.available_copies <= 0:
             return False, "No copies available for borrowing"
         
@@ -65,13 +84,27 @@ class BorrowService:
         
         db.session.add(borrow)
         
-        reservations = Reservation.query.filter_by(
+        from app.services.reservation_service import ReservationService
+        
+        pending_reservations = Reservation.query.filter_by(
             book_id=book_id,
             reader_id=reader_id,
             status='pending'
         ).all()
-        for r in reservations:
+        for r in pending_reservations:
+            cancelled_position = r.queue_position
             r.mark_fulfilled()
+            ReservationService._update_queue_positions(book_id, cancelled_position)
+        
+        available_reservations = Reservation.query.filter_by(
+            book_id=book_id,
+            reader_id=reader_id,
+            status='available'
+        ).all()
+        for r in available_reservations:
+            cancelled_position = r.queue_position
+            r.mark_fulfilled()
+            ReservationService._update_queue_positions(book_id, cancelled_position)
         
         db.session.commit()
         
@@ -124,12 +157,20 @@ class BorrowService:
         ).all()
         
         count = 0
+        book_ids = set()
         for borrow in overdue_borrows:
+            borrow.return_book()
             borrow.mark_overdue()
             log_drm_action(borrow.id, 'book_overdue', success=True)
+            book_ids.add(borrow.book_id)
             count += 1
         
         db.session.commit()
+        
+        from app.services.reservation_service import ReservationService
+        for book_id in book_ids:
+            ReservationService.process_available_book(book_id)
+        
         return count
     
     @staticmethod

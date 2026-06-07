@@ -558,6 +558,143 @@ class DRMTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         print("✓ 管理员可以访问管理面板")
 
+    def test_29_overdue_auto_returns_book(self):
+        print("\n=== 测试29: 到期自动归还电子书并释放名额 ===")
+        test_book = Book.query.first()
+        test_license = test_book.licenses.first()
+        
+        reader1 = User.query.filter_by(username='reader1').first()
+        if not reader1:
+            reader1 = User(username='reader1', email='reader1@test.com', role='reader')
+            reader1.set_password('pass123')
+            db.session.add(reader1)
+            db.session.commit()
+        
+        initial_available = test_license.available_copies
+        
+        borrow, msg = BorrowService.borrow_book(reader1.id, test_book.id)
+        self.assertIsNotNone(borrow)
+        self.assertEqual(test_license.available_copies, initial_available - 1)
+        
+        borrow.due_date = datetime.utcnow() - timedelta(days=1)
+        db.session.commit()
+        
+        count = BorrowService.process_overdue_books()
+        self.assertEqual(count, 1)
+        
+        db.session.refresh(borrow)
+        self.assertEqual(borrow.status, 'overdue')
+        self.assertIsNotNone(borrow.return_date)
+        
+        db.session.refresh(test_license)
+        self.assertEqual(test_license.available_copies, initial_available)
+        print(f"✓ 到期自动归还，名额已释放: {initial_available} 个可用")
+
+    def test_30_no_queue_jumping(self):
+        print("\n=== 测试30: 热门书预约排队不能被后来者插队 ===")
+        test_book = Book.query.first()
+        test_license = License.query.filter_by(book_id=test_book.id).first()
+        test_license.concurrent_copies = 1
+        db.session.commit()
+        
+        reader1 = User.query.filter_by(username='reader1').first()
+        if not reader1:
+            reader1 = User(username='reader1', email='reader1@test.com', role='reader')
+            reader1.set_password('pass123')
+            db.session.add(reader1)
+        
+        reader2 = User.query.filter_by(username='reader2').first()
+        if not reader2:
+            reader2 = User(username='reader2', email='reader2@test.com', role='reader')
+            reader2.set_password('pass223')
+            db.session.add(reader2)
+        
+        reader3 = User.query.filter_by(username='reader3').first()
+        if not reader3:
+            reader3 = User(username='reader3', email='reader3@test.com', role='reader')
+            reader3.set_password('pass323')
+            db.session.add(reader3)
+        
+        db.session.commit()
+        
+        borrow1, msg = BorrowService.borrow_book(reader1.id, test_book.id)
+        self.assertIsNotNone(borrow1)
+        print("✓ reader1 借走唯一副本")
+        
+        res2, msg = ReservationService.reserve_book(reader2.id, test_book.id)
+        self.assertIsNotNone(res2)
+        self.assertEqual(res2.queue_position, 1)
+        print("✓ reader2 预约，队列位置 1")
+        
+        res3, msg = ReservationService.reserve_book(reader3.id, test_book.id)
+        self.assertIsNotNone(res3)
+        self.assertEqual(res3.queue_position, 2)
+        print("✓ reader3 预约，队列位置 2")
+        
+        can_borrow, msg = BorrowService.can_borrow_book(reader3.id, test_book.id)
+        self.assertFalse(can_borrow)
+        self.assertIn("waiting list", msg)
+        print(f"✓ reader3 不能直接借阅（需要排队）: {msg}")
+        
+        BorrowService.return_book(borrow1.id, reader1.id)
+        db.session.refresh(res2)
+        self.assertEqual(res2.status, 'available')
+        print("✓ reader1 还书后，reader2 收到领取通知（status=available）")
+        
+        can_borrow, msg = BorrowService.can_borrow_book(reader3.id, test_book.id)
+        self.assertFalse(can_borrow)
+        self.assertIn("waiting list", msg)
+        print(f"✓ reader3 仍然不能直接借阅（reader2 在等待领取）: {msg}")
+        
+        can_borrow, msg = BorrowService.can_borrow_book(reader2.id, test_book.id)
+        self.assertTrue(can_borrow)
+        print("✓ reader2 可以领取预约的图书")
+        print("✓ 预约排队机制正常，无人能插队")
+
+    def test_31_overdue_notifies_waiting_list(self):
+        print("\n=== 测试31: 借阅到期释放名额自动通知排队者 ===")
+        test_book = Book.query.first()
+        test_license = License.query.filter_by(book_id=test_book.id).first()
+        test_license.concurrent_copies = 1
+        db.session.commit()
+        
+        reader1 = User.query.filter_by(username='reader1').first()
+        if not reader1:
+            reader1 = User(username='reader1', email='reader1@test.com', role='reader')
+            reader1.set_password('pass123')
+            db.session.add(reader1)
+        
+        reader2 = User.query.filter_by(username='reader2').first()
+        if not reader2:
+            reader2 = User(username='reader2', email='reader2@test.com', role='reader')
+            reader2.set_password('pass223')
+            db.session.add(reader2)
+        
+        db.session.commit()
+        
+        borrow1, msg = BorrowService.borrow_book(reader1.id, test_book.id)
+        self.assertIsNotNone(borrow1)
+        print("✓ reader1 借走唯一副本")
+        
+        res2, msg = ReservationService.reserve_book(reader2.id, test_book.id)
+        self.assertIsNotNone(res2)
+        self.assertEqual(res2.status, 'pending')
+        print("✓ reader2 预约排队，状态 pending")
+        
+        borrow1.due_date = datetime.utcnow() - timedelta(days=1)
+        db.session.commit()
+        
+        count = BorrowService.process_overdue_books()
+        self.assertEqual(count, 1)
+        print(f"✓ 处理了 {count} 本过期图书")
+        
+        db.session.refresh(res2)
+        self.assertEqual(res2.status, 'available')
+        self.assertTrue(res2.notified)
+        self.assertIsNotNone(res2.available_date)
+        print("✓ reader2 自动收到通知，状态变为 available")
+        print("✓ 借阅到期释放名额自动通知排队者")
+
 
 def run_tests():
     print("=" * 70)
